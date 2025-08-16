@@ -10,6 +10,25 @@ import { REDIS_UPLOAD_PARTS_KEY } from '../config/consts'
 
 const logger = new Logger('UPLOAD_CHUNCK_HANDLER')
 
+// Better change to queue or task
+const checkIfIsComplete = async (
+  uploadRequestPartsRedisKey: string,
+  numberOfParts: number,
+  uploadId: string,
+  objectKey: string,
+) => {
+  const partsCount = await redis.hlen(uploadRequestPartsRedisKey)
+  const totalParts = Number(numberOfParts)
+
+  if (partsCount === totalParts) {
+    try {
+      await uploadCompletedHandler(uploadId, objectKey)
+    } catch {
+      logger.error('Failed to complete upload')
+    }
+  }
+}
+
 export function uploadChunkHandler(req: Request, res: Response) {
   const contentPart = Number(req.headers['content-part'] as string)
   const uploadRequestId = req.headers['x-upload-id'] as string
@@ -60,12 +79,12 @@ export function uploadChunkHandler(req: Request, res: Response) {
       )
       await redis.expire(uploadRequestPartsRedisKey, 7200)
 
-      const partsCount = await redis.hlen(uploadRequestPartsRedisKey)
-      const totalParts = Number(meta.numberOfParts)
-
-      if (partsCount === totalParts) {
-        await uploadCompletedHandler(uploadId, objectKey)
-      }
+      checkIfIsComplete(
+        uploadRequestPartsRedisKey,
+        Number(meta.numberOfParts),
+        uploadId,
+        objectKey,
+      )
 
       return res.status(200).json({ message: 'Chunk Uploaded' })
     } catch (err) {
