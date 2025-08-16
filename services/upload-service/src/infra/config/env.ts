@@ -1,12 +1,10 @@
-import { Logger } from '@/infra/adapters/logger/logger.adapter'
 import dotenv from 'dotenv'
 import { z } from 'zod'
 
 dotenv.config({
   path: ['.env', '.env.local'],
+  quiet: true,
 })
-
-const logger = new Logger('ENV_VALIDATION')
 
 const envSchema = z.object({
   BUCKET_NAME: z.string().min(1, 'BUCKET_NAME is required'),
@@ -26,7 +24,7 @@ const envSchema = z.object({
     .enum(['error', 'warn', 'info', 'debug'])
     .optional()
     .default('info'),
-  REDIS_HOST: z.url(),
+  REDIS_HOST: z.string().min(1),
   REDIS_PORT: z
     .string()
     .transform((port) => Number(port))
@@ -34,12 +32,14 @@ const envSchema = z.object({
       message: 'PORT must be a positive number',
     }),
   REDIS_PASSWORD: z.string(),
+  RABBITMQ_URL: z.string().url(),
+  UPLOAD_QUEUE_NAME: z.string().min(1),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
 
 if (!parsedEnv.success) {
-  logger.error('Invalid environment variables:', parsedEnv.error)
+  console.error('Invalid environment variables:', parsedEnv.error)
   throw new Error('Invalid env file')
 }
 
@@ -54,4 +54,6 @@ export const env = {
   redisHost: parsedEnv.data.REDIS_HOST,
   redisPort: parsedEnv.data.REDIS_PORT,
   redisPassword: parsedEnv.data.REDIS_PASSWORD,
+  rabbitmqUrl: parsedEnv.data.RABBITMQ_URL,
+  uploadedQueueName: parsedEnv.data.UPLOAD_QUEUE_NAME,
 }
