@@ -19,7 +19,8 @@ describe('uploadRequestHandler', () => {
 
   it('should create new upload and save on Redis', async () => {
     mockBucketClient.createNewMultipartUpload.mockResolvedValue('mockUploadId')
-    mockRedis.set.mockResolvedValue(true)
+    mockRedis.hset.mockResolvedValue(true)
+    mockRedis.expire.mockResolvedValue(true)
 
     const body = {
       fileName: 'video.mp4',
@@ -31,7 +32,7 @@ describe('uploadRequestHandler', () => {
     const res = await request(app).post('/upload-request').send(body)
     expect(res.status).toBe(200)
     expect(res.body.uploadRequestId).toContain('mockUploadId')
-    expect(mockRedis.set).toHaveBeenCalled()
+    expect(mockRedis.hset).toHaveBeenCalled()
     expect(mockBucketClient.createNewMultipartUpload).toHaveBeenCalledWith(
       expect.any(String),
     )

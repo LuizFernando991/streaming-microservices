@@ -17,11 +17,9 @@ describe('uploadStatusHandler', () => {
   })
 
   it('should return the sent parts', async () => {
-    mockRedis.get.mockResolvedValueOnce(
-      JSON.stringify({
-        parts: [{ PartNumber: 1, ETag: 'abc' }],
-      }),
-    )
+    mockRedis.hvals.mockResolvedValueOnce([
+      JSON.stringify({ PartNumber: 1, ETag: 'abc' }),
+    ])
 
     const res = await request(app).get('/upload-status/test')
     expect(res.status).toBe(200)
@@ -29,8 +27,8 @@ describe('uploadStatusHandler', () => {
   })
 
   it('should return 404 if upload is not found', async () => {
-    mockRedis.get.mockResolvedValueOnce(null)
-    const res = await request(app).get('/upload-status/test')
+    mockRedis.hvals.mockResolvedValueOnce([])
+    const res = await request(app).get('/upload-status/test<>test')
     expect(res.status).toBe(404)
     expect(res.body.message).toBe('Upload not found')
   })
