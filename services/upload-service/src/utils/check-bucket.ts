@@ -1,12 +1,11 @@
-import {
-  BUCKET_NAME,
-  bucketClient,
-} from '@/infra/adapters/bucket/bucket.adapter'
+import { BucketClient } from '@/infra/adapters/bucket/bucket.adapter'
 import { Logger } from '@/infra/adapters/logger/logger.adapter'
+import { BUCKET_NAME } from '@/infra/config/consts'
 
 const logger = new Logger('BUCKET_CHECK')
 
 export async function ensureBucketExists() {
+  const bucketClient = BucketClient.getInstance()
   try {
     await bucketClient.checkBucket()
     logger.info(`Bucket "${BUCKET_NAME}" checked`)

@@ -1,3 +1,4 @@
+import { BUCKET_NAME } from '@/infra/config/consts'
 import { env } from '@/infra/config/env'
 import {
   S3Client,
@@ -8,10 +9,10 @@ import {
   CreateBucketCommand,
   AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3'
+import Stream from 'node:stream'
 
-export const BUCKET_NAME = env.bucketName
-
-class BucketClient {
+export class BucketClient {
+  private static instance: BucketClient
   private readonly s3Client
 
   constructor() {
@@ -24,6 +25,13 @@ class BucketClient {
       endpoint: env.bucketUrl,
       forcePathStyle: true,
     })
+  }
+
+  public static getInstance(): BucketClient {
+    if (!BucketClient.instance) {
+      return new BucketClient()
+    }
+    return BucketClient.instance
   }
 
   async createNewMultipartUpload(objectKey: string): Promise<string> {
@@ -43,14 +51,22 @@ class BucketClient {
     objectKey: string,
     partNumber: number,
     uploadID: string,
-    buffer: Buffer,
+    stream: Stream.Readable,
   ) {
+    // I don't know why, but min.io throws an error if i don't convert to buffer
+    // In real application, we should use the stream object
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) {
+      chunks.push(chunk as Buffer)
+    }
+
+    const fileBuffer = Buffer.concat(chunks)
     const uploadPartCommand = new UploadPartCommand({
       Bucket: BUCKET_NAME,
       Key: objectKey,
       PartNumber: partNumber,
       UploadId: uploadID,
-      Body: buffer,
+      Body: fileBuffer,
     })
 
     const etagObj = await this.s3Client.send(uploadPartCommand)
@@ -63,13 +79,14 @@ class BucketClient {
     uploadID: string,
     parts: { PartNumber: number; ETag: string }[],
   ) {
+    const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber)
     await this.s3Client.send(
       new CompleteMultipartUploadCommand({
         Bucket: BUCKET_NAME,
         Key: objectKey,
         UploadId: uploadID,
         MultipartUpload: {
-          Parts: parts,
+          Parts: sortedParts,
         },
       }),
     )
@@ -106,5 +123,3 @@ class BucketClient {
     )
   }
 }
-
-export const bucketClient = new BucketClient()

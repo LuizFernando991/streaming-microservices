@@ -17,7 +17,7 @@ export function getServer() {
 
   app.post('/upload', uploadChunkHandler)
 
-  app.get('/upload-status/:fileId', uploadStatusHandler)
+  app.get('/upload-status/:uploadRequestId', uploadStatusHandler)
 
   return app
 }

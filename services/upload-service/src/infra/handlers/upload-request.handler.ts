@@ -1,10 +1,10 @@
 import { Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
-import { bucketClient } from '@/infra/adapters/bucket/bucket.adapter'
+import { BucketClient } from '@/infra/adapters/bucket/bucket.adapter'
 import { redis } from '@/infra/adapters/redis/redis.adapter'
 import { UploadMeta } from '@/types/UploadMeta.type'
-import { createRedisKey } from '@/utils/parse-redis-key'
 import { Logger } from '@/infra/adapters/logger/logger.adapter'
+import { REDIS_UPLOAD_DATA_KEY } from '../config/consts'
 
 const logger = new Logger('UPLOAD_REQUEST_HANDLER')
 
@@ -21,6 +21,7 @@ export async function uploadRequestHandler(req: Request, res: Response) {
 
   const fileId = uuidv4()
   const objectKey = `file-${fileId}`
+  const bucketClient = BucketClient.getInstance()
 
   try {
     const uploadID = await bucketClient.createNewMultipartUpload(objectKey)
@@ -36,8 +37,18 @@ export async function uploadRequestHandler(req: Request, res: Response) {
       episodeId: req.body.episodeId,
     }
 
-    const redisKey = createRedisKey(uploadID, objectKey)
-    await redis.set(redisKey, JSON.stringify(meta), 'EX', 3600)
+    const redisKey = REDIS_UPLOAD_DATA_KEY(uploadID, objectKey)
+
+    await redis.hset(redisKey, {
+      uploadID,
+      objectKey,
+      numberOfParts: meta.numberOfParts,
+      totalSize: meta.totalSize,
+      fileName: meta.fileName,
+      episodeId: meta.episodeId,
+    })
+
+    await redis.expire(redisKey, 7200)
 
     return res.status(200).json({
       uploadRequestId: redisKey,

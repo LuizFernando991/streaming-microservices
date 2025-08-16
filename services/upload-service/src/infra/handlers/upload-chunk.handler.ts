@@ -1,10 +1,12 @@
 import { Request, Response } from 'express'
+import Stream from 'node:stream'
 import Busboy from 'busboy'
 import { redis } from '@/infra/adapters/redis/redis.adapter'
-import { bucketClient } from '@/infra/adapters/bucket/bucket.adapter'
-import { UploadMeta } from '@/types/UploadMeta.type'
+import { BucketClient } from '@/infra/adapters/bucket/bucket.adapter'
 import { Logger } from '@/infra/adapters/logger/logger.adapter'
 import { getValuesFromRedisKey } from '@/utils/parse-redis-key'
+import { uploadCompletedHandler } from './upload-completed.handler'
+import { REDIS_UPLOAD_PARTS_KEY } from '../config/consts'
 
 const logger = new Logger('UPLOAD_CHUNCK_HANDLER')
 
@@ -25,52 +27,47 @@ export function uploadChunkHandler(req: Request, res: Response) {
   }
 
   const busboy = Busboy({ headers: req.headers })
+  const bucketClient = BucketClient.getInstance()
+
   busboy.on('file', async (_, file) => {
     try {
-      const metaStr = await redis.get(uploadId)
-      const meta: UploadMeta | null = metaStr ? JSON.parse(metaStr) : null
-
-      if (!meta) {
+      const meta = await redis.hgetall(uploadRequestId)
+      if (!meta || !meta.uploadID) {
         return res.status(400).json({
           message: `Upload not found`,
         })
       }
 
-      // minio requires (for now)
-      const chunks: Buffer[] = []
-      for await (const chunk of file) {
-        chunks.push(chunk as Buffer)
-      }
-
-      const fileBuffer = Buffer.concat(chunks)
-
       const etag = await bucketClient.uploadPart(
         objectKey,
         contentPart,
         meta.uploadID,
-        fileBuffer,
+        file as Stream.Readable,
       )
 
       if (!etag) {
         return res.status(500).json({ message: 'Internal error' })
       }
 
-      meta.parts.push({ PartNumber: contentPart, ETag: etag })
+      const newPartData = { PartNumber: contentPart, ETag: etag }
 
-      await redis.set(uploadRequestId, JSON.stringify(meta), 'EX', 3600)
+      const uploadRequestPartsRedisKey = REDIS_UPLOAD_PARTS_KEY(uploadId)
 
-      if (meta.parts.length === meta.numberOfParts) {
-        await bucketClient.completeMultPartUpload(
-          objectKey,
-          meta.uploadID,
-          meta.parts,
-        )
+      await redis.hset(
+        uploadRequestPartsRedisKey,
+        contentPart.toString(),
+        JSON.stringify(newPartData),
+      )
+      await redis.expire(uploadRequestPartsRedisKey, 7200)
 
-        await redis.del(uploadRequestId)
-        logger.info(`Upload Completed: ${objectKey}`)
+      const partsCount = await redis.hlen(uploadRequestPartsRedisKey)
+      const totalParts = Number(meta.numberOfParts)
+
+      if (partsCount === totalParts) {
+        await uploadCompletedHandler(uploadId, objectKey)
       }
 
-      return res.sendStatus(200)
+      return res.status(200).json({ message: 'Chunk Uploaded' })
     } catch (err) {
       logger.error('Erro upload chunk:', { error: err })
       return res.status(500).json({ message: 'Upload failed' })
