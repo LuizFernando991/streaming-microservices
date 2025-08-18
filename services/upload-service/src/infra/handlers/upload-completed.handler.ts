@@ -16,9 +16,10 @@ const logger = new Logger('UPLOAD_COMPLETE_HANDLER')
 
 export async function uploadCompletedHandler(
   uploadRequestId: string,
+  uploadId: string,
   objectKey: string,
 ) {
-  const lockKey = REDIS_UPLOAD_PARTS_LOCK_KEY(uploadRequestId)
+  const lockKey = REDIS_UPLOAD_PARTS_LOCK_KEY(uploadId)
   const bucketClient = BucketClient.getInstance()
 
   let lock: Lock
@@ -34,7 +35,8 @@ export async function uploadCompletedHandler(
   }
 
   try {
-    const uploadRequestPartsRedisKey = REDIS_UPLOAD_PARTS_KEY(uploadRequestId)
+    const uploadRequestPartsRedisKey = REDIS_UPLOAD_PARTS_KEY(uploadId)
+
     await retry(
       async () => {
         const [partsRaw, uploadMeta] = await Promise.all([
@@ -45,15 +47,12 @@ export async function uploadCompletedHandler(
         const parts: UploadedPart[] = partsRaw.map(
           (p) => JSON.parse(p) as UploadedPart,
         )
+
         const episodeId = uploadMeta.episodeId
 
         const queueAdapter = await QueueAdapter.getInstance()
 
-        await bucketClient.completeMultPartUpload(
-          objectKey,
-          uploadRequestId,
-          parts,
-        )
+        await bucketClient.completeMultPartUpload(objectKey, uploadId, parts)
 
         await queueAdapter.onUploadCompleted({
           episodeId,

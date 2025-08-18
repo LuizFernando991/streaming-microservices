@@ -12,6 +12,7 @@ const logger = new Logger('UPLOAD_CHUNCK_HANDLER')
 
 // Better change to queue or task
 const checkIfIsComplete = async (
+  uploadRequestRedisKey: string,
   uploadRequestPartsRedisKey: string,
   numberOfParts: number,
   uploadId: string,
@@ -22,7 +23,7 @@ const checkIfIsComplete = async (
 
   if (partsCount === totalParts) {
     try {
-      await uploadCompletedHandler(uploadId, objectKey)
+      await uploadCompletedHandler(uploadRequestRedisKey, uploadId, objectKey)
     } catch {
       logger.error('Failed to complete upload')
     }
@@ -31,15 +32,15 @@ const checkIfIsComplete = async (
 
 export function uploadChunkHandler(req: Request, res: Response) {
   const contentPart = Number(req.headers['content-part'] as string)
-  const uploadRequestId = req.headers['x-upload-id'] as string
+  const redisUploadRequestId = req.headers['x-upload-id'] as string
 
-  if (!contentPart || !uploadRequestId) {
+  if (!contentPart || !redisUploadRequestId) {
     return res
       .status(400)
       .json({ message: 'Missing "Content-Range" or "X-Upload-Id" header' })
   }
 
-  const { uploadId, objectKey } = getValuesFromRedisKey(uploadRequestId)
+  const { uploadId, objectKey } = getValuesFromRedisKey(redisUploadRequestId)
 
   if (!uploadId || !objectKey) {
     return res.status(400).json({ message: 'Invalid X-Upload-Id' })
@@ -50,8 +51,8 @@ export function uploadChunkHandler(req: Request, res: Response) {
 
   busboy.on('file', async (_, file) => {
     try {
-      const meta = await redis.hgetall(uploadRequestId)
-      if (!meta || !meta.uploadID) {
+      const meta = await redis.hgetall(redisUploadRequestId)
+      if (!meta || Object.keys(meta).length === 0) {
         return res.status(400).json({
           message: `Upload not found`,
         })
@@ -80,6 +81,7 @@ export function uploadChunkHandler(req: Request, res: Response) {
       await redis.expire(uploadRequestPartsRedisKey, 7200)
 
       checkIfIsComplete(
+        redisUploadRequestId,
         uploadRequestPartsRedisKey,
         Number(meta.numberOfParts),
         uploadId,
