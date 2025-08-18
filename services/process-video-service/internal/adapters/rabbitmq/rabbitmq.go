@@ -31,6 +31,18 @@ func (r *RabbitMQ) Close() {
 }
 
 func (r *RabbitMQ) Consume(queue string, handler func(event models.UploadEvent, ack func(), nack func(requeue bool))) {
+	_, err := r.channel.QueueDeclare(
+		queue,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		log.Fatal("Erro consumindo fila:", err)
+	}
+
 	msgs, err := r.channel.Consume(
 		queue,
 		"",
