@@ -32,6 +32,13 @@ export class QueueAdapter {
     episodeId: string
     objectkey: string
   }): Promise<void> {
-    await this.publish(env.uploadedQueueName, JSON.stringify(data))
+    await this.publish(
+      env.uploadedQueueName,
+      JSON.stringify({
+        bucket: env.bucketName,
+        object_key: data.objectkey,
+        episode_id: data.episodeId,
+      }),
+    )
   }
 }
