@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/signal"
 	"process-video-service/internal/adapters/ffmpeg"
 	"process-video-service/internal/adapters/rabbitmq"
 	"process-video-service/internal/adapters/s3"
 	"process-video-service/internal/app"
 	"process-video-service/internal/config"
+	"syscall"
 )
 
 func main() {
@@ -26,5 +30,8 @@ func main() {
 
 	processor := app.NewProcessor(cfg, rmqConn, s3Client, ffmpeg, cfg.BucketProcessedName)
 
-	processor.Listen()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	processor.Listen(ctx)
 }

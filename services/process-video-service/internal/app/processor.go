@@ -36,7 +36,7 @@ func NewProcessor(cfg *config.Config, queue interfaces.Queue, bucket interfaces.
 	}
 }
 
-func (p *Processor) Listen() {
+func (p *Processor) Listen(ctx context.Context) {
 	p.queue.Consume(p.uploadQueueName, func(event models.UploadEvent, ack func(), nack func(requeue bool)) {
 
 		p.logger.Infof("Event recived: key=%s episodeId=%s bucket=%s", event.Key, event.EpId, event.Bucket)
@@ -79,7 +79,7 @@ func (p *Processor) Listen() {
 
 	p.logger.Info("app listening queues")
 
-	select {}
+	<-ctx.Done()
 }
 
 func (p *Processor) ProcessVideo(event models.UploadEvent) error {
