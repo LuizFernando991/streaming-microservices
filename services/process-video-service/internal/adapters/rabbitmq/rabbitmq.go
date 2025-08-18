@@ -40,7 +40,7 @@ func (r *RabbitMQ) Consume(queue string, handler func(event models.UploadEvent, 
 		nil,
 	)
 	if err != nil {
-		log.Fatal("Erro consumindo fila:", err)
+		log.Fatal("Erro on declare queue:", err)
 	}
 
 	msgs, err := r.channel.Consume(
@@ -53,14 +53,13 @@ func (r *RabbitMQ) Consume(queue string, handler func(event models.UploadEvent, 
 		nil,
 	)
 	if err != nil {
-		log.Fatal("Erro consumindo fila:", err)
+		log.Fatal("Erro on consuming queue:", err)
 	}
 
 	go func() {
 		for d := range msgs {
 			var event models.UploadEvent
 			if err := json.Unmarshal(d.Body, &event); err != nil {
-				log.Println("Erro ao decodificar evento:", err)
 				_ = d.Nack(false, false)
 				continue
 			}
