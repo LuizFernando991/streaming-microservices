@@ -113,6 +113,7 @@ describe('uploadChunkHandler', () => {
     expect(res.status).toBe(200)
     expect(mockBucketClient.uploadPart).toHaveBeenCalled()
     expect(uploadCompletedHandler).toHaveBeenCalledWith(
+      'mockUploadId<>objKey',
       'mockUploadId',
       'objKey',
     )

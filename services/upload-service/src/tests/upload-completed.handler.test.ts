@@ -31,12 +31,12 @@ describe('uploadCompletedHandler', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    await uploadCompletedHandler(uploadRequestId, objectKey)
+    await uploadCompletedHandler(uploadRequestId, 'uploadId', objectKey)
 
     expect(mockRedlock.acquire).toHaveBeenCalled()
     expect(mockBucketClient.completeMultPartUpload).toHaveBeenCalledWith(
       objectKey,
-      uploadRequestId,
+      'uploadId',
       expect.any(Array),
     )
     expect(mockQueueAdapter.onUploadCompleted).toHaveBeenCalledWith({
@@ -53,7 +53,7 @@ describe('uploadCompletedHandler', () => {
     mockRedlock.acquire.mockRejectedValueOnce(lockError)
 
     await expect(
-      uploadCompletedHandler(uploadRequestId, objectKey),
+      uploadCompletedHandler(uploadRequestId, 'uploadId', objectKey),
     ).resolves.not.toThrow()
 
     expect(mockBucketClient.completeMultPartUpload).not.toHaveBeenCalled()
@@ -71,7 +71,7 @@ describe('uploadCompletedHandler', () => {
       new Error('S3 error'),
     )
 
-    await uploadCompletedHandler(uploadRequestId, objectKey)
+    await uploadCompletedHandler(uploadRequestId, 'uploadId', objectKey)
 
     expect(mockBucketClient.completeMultPartUpload).toHaveBeenCalled()
     expect(mockQueueAdapter.onUploadCompleted).not.toHaveBeenCalled()
@@ -92,7 +92,7 @@ describe('uploadCompletedHandler', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    await uploadCompletedHandler(uploadRequestId, objectKey)
+    await uploadCompletedHandler(uploadRequestId, 'uploadId', objectKey)
 
     expect(releaseMock).toHaveBeenCalled()
   })

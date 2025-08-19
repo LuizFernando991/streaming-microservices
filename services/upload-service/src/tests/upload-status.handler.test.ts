@@ -26,10 +26,10 @@ describe('uploadStatusHandler', () => {
     expect(res.body.uploadedParts).toEqual([1])
   })
 
-  it('should return 404 if upload is not found', async () => {
+  it('should return a empty array if upload is not found', async () => {
     mockRedis.hvals.mockResolvedValueOnce([])
     const res = await request(app).get('/upload-status/test<>test')
-    expect(res.status).toBe(404)
-    expect(res.body.message).toBe('Upload not found')
+    expect(res.status).toBe(200)
+    expect(res.body.uploadedParts).toEqual([])
   })
 })

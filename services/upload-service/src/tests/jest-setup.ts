@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 import {
   mockBucketClient,
+  mockLogger,
   mockQueueAdapter,
   mockRedis,
   mockRedlock,
@@ -26,13 +27,10 @@ jest.mock('@/infra/adapters/bucket/bucket.adapter', () => ({
   },
 }))
 
-jest.mock('@/infra/adapters/logger/logger.adapter', () => {
-  return {
-    Logger: jest.fn().mockImplementation(() => ({
-      info: jest.fn(),
-      error: jest.fn(),
-      warn: jest.fn(),
-      debug: jest.fn(),
-    })),
-  }
-})
+jest.mock('@/infra/adapters/logger/logger.adapter', () => ({
+  Logger: jest.fn(() => mockLogger),
+}))
+
+jest.mock('@/infra/middlewares/request.middleware', () => ({
+  requestsMiddleware: jest.fn((_req, _res, next) => next()),
+}))
