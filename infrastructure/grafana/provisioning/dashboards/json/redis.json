@@ -1,0 +1,26 @@
+{
+  "id": null,
+  "uid": "redis",
+  "title": "Redis Overview",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Connected Clients",
+      "targets": [
+        { "expr": "redis_connected_clients", "legendFormat": "clients" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage",
+      "targets": [
+        { "expr": "redis_memory_used_bytes", "legendFormat": "used" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    }
+  ]
+}

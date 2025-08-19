@@ -1,0 +1,26 @@
+{
+  "id": null,
+  "uid": "rabbitmq",
+  "title": "RabbitMQ Overview",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Messages Ready",
+      "targets": [
+        { "expr": "rabbitmq_queue_messages_ready{queue=\"upload_completed\"}", "legendFormat": "ready" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumers",
+      "targets": [
+        { "expr": "rabbitmq_consumers", "legendFormat": "consumers" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    }
+  ]
+}

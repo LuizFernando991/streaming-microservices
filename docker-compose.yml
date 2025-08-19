@@ -15,7 +15,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - ./volumes/minio-data:/data
+      - minio_data:/data
 
   upload-redis:
     image: redis:7
@@ -28,7 +28,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ./volumes/redis-data:/data
+      - redis_data:/data
 
   upload-rabbitmq:
     image: rabbitmq:3-management
@@ -40,9 +40,111 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin123
     volumes:
-      - ./volumes/rabbitmq-data:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis_exporter
+    environment:
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - upload-redis
+    ports:
+      - "9121:9121"
+
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:latest
+    container_name: rabbitmq_exporter
+    environment:
+      RABBIT_URL: http://upload-rabbitmq:15672
+      RABBIT_USER: admin
+      RABBIT_PASSWORD: admin123
+    depends_on:
+      - upload-rabbitmq
+    ports:
+      - "9419:9419"
+
+  upload-service:
+    build:
+      context: ./services/upload-service
+      dockerfile: Dockerfile
+    container_name: upload-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      BUCKET_URL: http://minio:9000
+      BUCKET_ACCESS_KEY: admin
+      BUCKET_ACCESS_PASSWORD: admin123
+      BUCKET_NAME: raw-videos
+      NODE_ENV: development
+      LOG_LEVEL: info
+      REDIS_HOST: upload-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: secret
+      RABBITMQ_URL: amqp://admin:admin123@upload-rabbitmq:5672
+      UPLOAD_QUEUE_NAME: upload_completed
+      LOKI_URL: http://loki:3100
+      OTEL_COLLECTOR_URL: http://tempo:4318/v1/traces
+    depends_on:
+      - minio
+      - upload-redis
+      - upload-rabbitmq
+      - redis-exporter
+      - rabbitmq-exporter
+      - tempo
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - ./infrastructure/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+  tempo:
+    image: grafana/tempo:2.4.0
+    container_name: tempo
+    ports:
+      - "4318:4318"
+      - "3200:3200"
+      - "4317:4317"
+      - "9411:9411"
+    volumes:
+      - ./infrastructure/tempo.yaml:/etc/tempo/tempo.yaml
+      - tempo_data:/var/tempo
+    command: -config.file=/etc/tempo/tempo.yaml
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+    - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/json/upload-service.json
+    depends_on:
+      - tempo
 
 volumes:
   minio_data:
   redis_data:
   rabbitmq_data:
+  tempo_data:
