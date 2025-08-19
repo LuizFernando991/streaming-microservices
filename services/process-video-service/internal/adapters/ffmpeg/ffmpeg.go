@@ -5,15 +5,22 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"process-video-service/internal/interfaces"
 	"process-video-service/internal/models"
 )
+
+type segmentInfo struct {
+	Name     string
+	Duration float64
+}
 
 type FFMPEGProcessor struct {
 	bucket              interfaces.Bucket
@@ -53,7 +60,6 @@ func (f *FFMPEGProcessor) processResolution(ctx context.Context, event models.Up
 	os.MkdirAll(tmp, 0755)
 	defer os.RemoveAll(tmp)
 
-	playlistPath := filepath.Join(tmp, "index.m3u8")
 	segmentPattern := filepath.Join(tmp, "seg%03d.ts")
 
 	stream, err := f.bucket.GetObjectStream(event.Bucket, event.Key)
@@ -62,24 +68,7 @@ func (f *FFMPEGProcessor) processResolution(ctx context.Context, event models.Up
 	}
 	defer stream.Close()
 
-	// // Direct command
-	// cmd := exec.CommandContext(ctx,
-	// 	"ffmpeg",
-	// 	"-hwaccel", "cuda",
-	// 	"-i", "pipe:0",
-	// 	"-vf", "scale=-2:"+strconv.Itoa(resolution),
-	// 	"-c:v", "h264_nvenc",
-	// 	"-preset", "fast",
-	// 	"-c:a", "aac",
-	// 	"-f", "hls",
-	// 	"-hls_time", "10",
-	// 	"-hls_list_size", "0",
-	// 	"-hls_segment_filename", segmentPattern,
-	// 	playlistPath,
-	// )
-
 	args := []string{"-i", "pipe:0"}
-
 	if f.enableGpuProcess {
 		args = append(args, "-c:v", "h264_nvenc", "-preset", "fast")
 		if f.enableGPUScaleNPP {
@@ -88,9 +77,10 @@ func (f *FFMPEGProcessor) processResolution(ctx context.Context, event models.Up
 			args = append(args, "-vf", fmt.Sprintf("scale=-2:%d", resolution))
 		}
 	} else {
-		// CPU
 		args = append(args, "-c:v", "libx264", "-preset", "fast", "-vf", fmt.Sprintf("scale=-2:%d", resolution))
 	}
+
+	playlistTmp := filepath.Join(tmp, "index.m3u8")
 
 	args = append(args,
 		"-c:a", "aac",
@@ -98,11 +88,10 @@ func (f *FFMPEGProcessor) processResolution(ctx context.Context, event models.Up
 		"-hls_time", "10",
 		"-hls_list_size", "0",
 		"-hls_segment_filename", segmentPattern,
-		playlistPath,
+		playlistTmp,
 	)
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
-
 	cmd.Stdin = stream
 
 	if err := cmd.Start(); err != nil {
@@ -111,6 +100,8 @@ func (f *FFMPEGProcessor) processResolution(ctx context.Context, event models.Up
 
 	uploaded := map[string]bool{}
 	s3Prefix := fmt.Sprintf("videos/%s/%dp", event.EpId, resolution)
+
+	var segments []segmentInfo
 
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
@@ -133,24 +124,63 @@ loop:
 					continue
 				}
 				uploaded[fl.Name()] = true
+				if !strings.HasSuffix(fl.Name(), ".ts") {
+					continue
+				}
 
 				localPath := filepath.Join(tmp, fl.Name())
 				file, err := os.Open(localPath)
 				if err != nil {
 					continue
 				}
+
+				// sobe pro S3
 				if err := f.bucket.UploadFileReader(f.processedBucketName, s3Prefix+"/"+fl.Name(), file); err != nil {
 					file.Close()
 					return err
 				}
 				file.Close()
+
+				// calcula duração do segmento (ffprobe rápido)
+				dur, _ := probeDuration(localPath)
+				segments = append(segments, segmentInfo{
+					Name:     fl.Name(),
+					Duration: dur,
+				})
+
+				// remove do disco
 				os.Remove(localPath)
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
-	return nil
+	// gera manifest manual
+	var playlist bytes.Buffer
+	playlist.WriteString("#EXTM3U\n")
+	playlist.WriteString("#EXT-X-VERSION:3\n")
+
+	// maior duração arredondada pra cima
+	maxDur := 0.0
+	for _, s := range segments {
+		if s.Duration > maxDur {
+			maxDur = s.Duration
+		}
+	}
+	playlist.WriteString(fmt.Sprintf("#EXT-X-TARGETDURATION:%d\n", int(math.Ceil(maxDur))))
+	playlist.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
+
+	for _, s := range segments {
+		playlist.WriteString(fmt.Sprintf("#EXTINF:%.3f,\n%s\n", s.Duration, s.Name))
+	}
+	playlist.WriteString("#EXT-X-ENDLIST\n")
+
+	// sobe manifest
+	return f.bucket.UploadFileReader(
+		f.processedBucketName,
+		s3Prefix+"/index.m3u8",
+		bytes.NewReader(playlist.Bytes()),
+	)
 }
 
 func (f *FFMPEGProcessor) getVideoHeightPartial(bucket, key, byteRange string) (int, error) {
@@ -190,4 +220,13 @@ func (f *FFMPEGProcessor) getHeightFromStream(stream io.Reader) (int, error) {
 		return 0, err
 	}
 	return h, nil
+}
+
+func probeDuration(path string) (float64, error) {
+	out, err := exec.Command("ffprobe", "-v", "error", "-show_entries",
+		"format=duration", "-of", "default=noprint_wrappers=1:nokey=1", path).Output()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
 }
