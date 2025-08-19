@@ -32,8 +32,9 @@ const envSchema = z.object({
       message: 'PORT must be a positive number',
     }),
   REDIS_PASSWORD: z.string(),
-  RABBITMQ_URL: z.string().url(),
+  RABBITMQ_URL: z.url(),
   UPLOAD_QUEUE_NAME: z.string().min(1),
+  OTEL_COLLECTOR_URL: z.url().optional(),
 })
 
 const parsedEnv = envSchema.safeParse(process.env)
@@ -56,4 +57,5 @@ export const env = {
   redisPassword: parsedEnv.data.REDIS_PASSWORD,
   rabbitmqUrl: parsedEnv.data.RABBITMQ_URL,
   uploadedQueueName: parsedEnv.data.UPLOAD_QUEUE_NAME,
+  otelCollectorUrl: parsedEnv.data.OTEL_COLLECTOR_URL,
 }
