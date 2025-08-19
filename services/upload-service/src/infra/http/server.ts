@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 
-import { requestsMiddleware } from '@/infra/middlewares/request.midleware'
+import { requestsMiddleware } from '@/infra/middlewares/request.middleware'
 import { uploadRequestHandler } from '@/infra/handlers/upload-request.handler'
 import { uploadChunkHandler } from '@/infra/handlers/upload-chunk.handler'
 import { uploadStatusHandler } from '@/infra/handlers/upload-status.handler'
