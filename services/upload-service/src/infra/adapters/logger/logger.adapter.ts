@@ -1,10 +1,11 @@
 import pino, { Logger as PinoLogger } from 'pino'
+import { randomUUID } from 'crypto'
 import { env } from '@/infra/config/env'
 
 export class Logger {
   private logger: PinoLogger
 
-  constructor(context?: string) {
+  constructor(context?: string, traceId?: string) {
     this.logger = pino({
       level: env.logLevel || 'info',
       transport:
@@ -12,7 +13,7 @@ export class Logger {
           ? { target: 'pino-pretty', options: { colorize: true } }
           : undefined,
       base: { service: 'upload-service' },
-    }).child({ context })
+    }).child({ context, traceId: traceId || randomUUID() })
   }
 
   info(message: string, meta?: object) {
