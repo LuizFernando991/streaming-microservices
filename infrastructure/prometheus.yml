@@ -15,10 +15,6 @@ scrape_configs:
       - targets: ["rabbitmq-exporter:9419"]
 
   - job_name: "minio"
-    metrics_path: /minio/v2/metrics/cluster
+    metrics_path: /minio/prometheus/metrics
     static_configs:
       - targets: ["minio:9000"]
-
-  # - job_name: "minio"
-  #   static_configs:
-  #     - targets: ["minio:9000"]

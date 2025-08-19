@@ -1,0 +1,34 @@
+{
+  "id": null,
+  "uid": "minio",
+  "title": "MinIO Overview",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Bucket Size (bytes)",
+      "targets": [
+        { "expr": "bucket_usage_size", "legendFormat": "{{bucket}}" }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Object Count",
+      "targets": [
+        { "expr": "bucket_objects_count", "legendFormat": "{{bucket}}" }
+      ],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Usage",
+      "targets": [
+        { "expr": "disk_storage_used" }
+      ],
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 }
+    }
+  ]
+}
