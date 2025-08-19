@@ -33,18 +33,15 @@ func TestProcessVideo_Success(t *testing.T) {
 		Bucket: "test-bucket",
 	}
 
-	// simula altura original 1080 → gera [720,1080]
 	mockVideo.On("GetHeight", mock.Anything, "test-bucket", "video.mp4").
 		Return(1080, nil)
 
 	mockVideo.On("Process", mock.Anything, event, mock.AnythingOfType("int")).
 		Return(nil)
 
-	// upload da master playlist
 	mockBucket.On("UploadFileReader", "test-bucket-2", "videos/ep123/master.m3u8", mock.Anything).
 		Return(nil)
 
-	// delete do original
 	mockBucket.On("DeleteObject", "test-bucket", "video.mp4").
 		Return(nil)
 
@@ -90,7 +87,6 @@ func TestProcessVideo_ErrorOnProcessResolution(t *testing.T) {
 	mockVideo.On("GetHeight", mock.Anything, "test-bucket", "video.mp4").
 		Return(720, nil)
 
-	// erro em 720p
 	mockVideo.On("Process", mock.Anything, event, mock.AnythingOfType("int")).
 		Return(errors.New("encoder crash"))
 

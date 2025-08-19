@@ -134,33 +134,29 @@ loop:
 					continue
 				}
 
-				// sobe pro S3
 				if err := f.bucket.UploadFileReader(f.processedBucketName, s3Prefix+"/"+fl.Name(), file); err != nil {
 					file.Close()
 					return err
 				}
 				file.Close()
 
-				// calcula duração do segmento (ffprobe rápido)
 				dur, _ := probeDuration(localPath)
 				segments = append(segments, segmentInfo{
 					Name:     fl.Name(),
 					Duration: dur,
 				})
 
-				// remove do disco
 				os.Remove(localPath)
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
-	// gera manifest manual
+	// creating index.m3u8
 	var playlist bytes.Buffer
 	playlist.WriteString("#EXTM3U\n")
 	playlist.WriteString("#EXT-X-VERSION:3\n")
 
-	// maior duração arredondada pra cima
 	maxDur := 0.0
 	for _, s := range segments {
 		if s.Duration > maxDur {
@@ -175,7 +171,6 @@ loop:
 	}
 	playlist.WriteString("#EXT-X-ENDLIST\n")
 
-	// sobe manifest
 	return f.bucket.UploadFileReader(
 		f.processedBucketName,
 		s3Prefix+"/index.m3u8",
