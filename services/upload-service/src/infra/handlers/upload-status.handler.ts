@@ -24,7 +24,7 @@ export async function uploadStatusHandler(req: Request, res: Response) {
       (p) => (JSON.parse(p) as UploadedPart).PartNumber,
     )
 
-    if (!partsRaw || partsRaw.length === 0) {
+    if (!partsRaw) {
       return res.status(404).json({
         message: `Upload not found`,
       })
