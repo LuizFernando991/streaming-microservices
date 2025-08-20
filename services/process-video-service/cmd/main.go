@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"process-video-service/internal/adapters/ffmpeg"
@@ -10,6 +13,7 @@ import (
 	"process-video-service/internal/app"
 	"process-video-service/internal/config"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -30,8 +34,36 @@ func main() {
 
 	processor := app.NewProcessor(cfg, rmqConn, s3Client, ffmpeg, cfg.BucketProcessedName)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "running",
+		})
+	})
+
+	server := &http.Server{
+		Addr:         ":" + cfg.Port,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		fmt.Println("Http server running on :" + cfg.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+	}()
+
+	processCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	processor.Listen(ctx)
+	go processor.Listen(processCtx)
+
+	<-processCtx.Done()
+
+	shutdownServerCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	server.Shutdown(shutdownServerCtx)
+
 }

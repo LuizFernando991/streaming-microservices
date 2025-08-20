@@ -16,6 +16,7 @@ type Config struct {
 	BucketProcessedName   string `mapstructure:"BUCKET_PROCESSED_NAME"`
 	EnableGPUProcess      bool   `mapstructure:"ENABLE_GPU_PROCESS"`
 	EnableGPUScaleNPP     bool   `mapstructure:"ENABLE_GPU_SCALE_NPP"`
+	Port                  string `mapstructure:"PORT"`
 }
 
 func LoadEnv(path string) (*Config, error) {
