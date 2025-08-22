@@ -8,7 +8,8 @@ const config: JestConfigWithTsJest = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   coverageDirectory: 'coverage',
-  setupFiles: ['<rootDir>/src/tests/jest-setup.ts']
+  setupFiles: ['<rootDir>/src/tests/jest-setup.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/']
 }
 
 export default config
