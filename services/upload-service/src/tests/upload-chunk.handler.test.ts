@@ -14,6 +14,7 @@ describe('uploadChunkHandler', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+
     app = getServer()
   })
 
