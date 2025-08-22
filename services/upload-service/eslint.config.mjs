@@ -6,7 +6,7 @@ import globals from 'globals'
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'jest.config.ts'],
+    ignores: ['eslint.config.mjs', 'jest.config.ts', 'node_modules', 'dist'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
