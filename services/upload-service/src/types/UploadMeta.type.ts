@@ -1,6 +1,5 @@
 export type UploadMeta = {
   uploadID: string
-  parts: { PartNumber: number; ETag: string }[]
   totalSize: number
   chunkSize: number
   numberOfParts: number

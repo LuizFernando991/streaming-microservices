@@ -28,7 +28,6 @@ export async function uploadRequestHandler(req: Request, res: Response) {
 
     const meta: UploadMeta = {
       uploadID,
-      parts: [],
       chunkSize: 40 * 1024 * 1024, // 40 MB
       totalSize: req.body.totalSize,
       numberOfParts: Number(req.body.totalParts),

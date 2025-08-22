@@ -11,6 +11,7 @@ import {
   REDIS_UPLOAD_PARTS_KEY,
   REDIS_UPLOAD_PARTS_LOCK_KEY,
 } from '../config/consts'
+import { parseUploadMeta } from '@/utils/parse-upload-meta'
 
 const logger = new Logger('UPLOAD_COMPLETE_HANDLER')
 
@@ -20,7 +21,6 @@ export async function uploadCompletedHandler(
   objectKey: string,
 ) {
   const lockKey = REDIS_UPLOAD_PARTS_LOCK_KEY(uploadId)
-  const bucketClient = BucketClient.getInstance()
 
   let lock: Lock
 
@@ -39,7 +39,7 @@ export async function uploadCompletedHandler(
 
     await retry(
       async () => {
-        const [partsRaw, uploadMeta] = await Promise.all([
+        const [partsRaw, uploadMetaRaw] = await Promise.all([
           redis.hvals(uploadRequestPartsRedisKey),
           redis.hgetall(uploadRequestId),
         ])
@@ -48,8 +48,11 @@ export async function uploadCompletedHandler(
           (p) => JSON.parse(p) as UploadedPart,
         )
 
+        const uploadMeta = parseUploadMeta(uploadMetaRaw)
+
         const episodeId = uploadMeta.episodeId
 
+        const bucketClient = BucketClient.getInstance()
         const queueAdapter = await QueueAdapter.getInstance()
 
         await bucketClient.completeMultPartUpload(objectKey, uploadId, parts)
