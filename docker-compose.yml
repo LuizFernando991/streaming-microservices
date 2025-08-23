@@ -42,6 +42,11 @@ services:
       RABBITMQ_DEFAULT_PASS: admin123
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis-exporter:
     image: oliver006/redis_exporter:latest
@@ -94,6 +99,32 @@ services:
       - redis-exporter
       - rabbitmq-exporter
       - tempo
+
+  process-video-service:
+    build:
+      context: ./services/process-video-service
+      dockerfile: Dockerfile
+    container_name: process-video-service
+    ports:
+      - "8080:8080"
+    runtime: nvidia
+    environment:
+      RABBITMQ_URL: amqp://admin:admin123@upload-rabbitmq:5672
+      UPLOAD_QUEUE_NAME: upload_completed
+      PROCESSED_VIDEO_QUEUE_NAME: process_video_complete
+      FAILED_PROCESSED_VIDEO_QUEUE_NAME: process_video_failed
+      BUCKET_URL: http://minio:9000
+      BUCKET_RAW_NAME: raw-videos
+      BUCKET_PROCESSED_NAME: videos
+      BUCKET_ACCESS_KEY: admin
+      BUCKET_ACCESS_PASSWORD: admin123
+      ENABLE_GPU_PROCESS: "true"
+      PORT: 8080
+    depends_on:
+      upload-rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus
