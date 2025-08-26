@@ -69,7 +69,25 @@ services:
       - upload-rabbitmq
     ports:
       - "9419:9419"
+  catalog-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: catalogdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
 
+  auth-redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
   upload-service:
     build:
       context: ./services/upload-service
@@ -180,3 +198,4 @@ volumes:
   redis_data:
   rabbitmq_data:
   tempo_data:
+  catalog-db-data:
