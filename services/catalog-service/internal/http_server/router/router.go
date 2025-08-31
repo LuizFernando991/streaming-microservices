@@ -33,6 +33,7 @@ func (r *Router) InitRoutes() {
 	// Work group
 	worksGroup := v1Group.Group("/work")
 	{
+		worksGroup.GET("/:id", r.controllers.WorkController.GetByID)
 		worksGroup.POST("/create", r.controllers.WorkController.CreateWork)
 	}
 }

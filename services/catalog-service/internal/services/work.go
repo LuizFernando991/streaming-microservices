@@ -57,3 +57,13 @@ func (ws *WorkService) CreateWork(ctx context.Context, title, description string
 
 	return createdWork, nil
 }
+
+func (ws *WorkService) GetWorkById(ctx context.Context, id string) (*models.Work, error) {
+	work, err := ws.workRepository.GetByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return work, nil
+}

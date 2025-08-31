@@ -2,6 +2,7 @@ package controllers
 
 import (
 	http_errors "catalog-service/internal/http_server/errors"
+	"catalog-service/internal/models"
 	"catalog-service/internal/services"
 	"fmt"
 	"net/http"
@@ -83,4 +84,34 @@ func (wc *WorkController) CreateWork(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, work)
+}
+
+func (wc *WorkController) GetByID(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, http_errors.ErrorResponse{
+			Status:  "bad_request",
+			Message: "id is required",
+		})
+		return
+	}
+
+	work, err := wc.workService.GetWorkById(ctx, id)
+	if err != nil {
+		if err == models.ErrNotFound {
+			ctx.JSON(http.StatusNotFound, http_errors.ErrorResponse{
+				Status:  "not_found",
+				Message: "work not found",
+			})
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, http_errors.ErrorResponse{
+			Status:  "internal_error",
+			Message: "internal error",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, work)
 }

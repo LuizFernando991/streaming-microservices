@@ -5,7 +5,9 @@ import (
 	"catalog-service/internal/interfaces"
 	"catalog-service/internal/models"
 	"database/sql"
+	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -51,13 +53,24 @@ func (r *WorkRepository) Create(workData models.Work) (*models.Work, error) {
 }
 
 func (r *WorkRepository) GetByID(id string) (*models.Work, error) {
+
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, models.ErrNotFound
+	}
+
 	var work models.Work
 	query := `SELECT id, tumb, title, description, created_at, updated_at FROM works WHERE id = $1`
 	err := r.execer.Get(&work, query, id)
+
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, models.ErrNotFound
+		}
+
 		logger.Error(err)
 		return nil, err
 	}
+
 	return &work, nil
 }
 
