@@ -86,6 +86,16 @@ func (wc *WorkController) CreateWork(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, work)
 }
 
+// GetByID godoc
+// @Summary Get a work by ID
+// @Description Get a single work by its ID
+// @Tags Works
+// @Produce json
+// @Param id path string true "Work ID"
+// @Success 200 {object} models.Work
+// @Failure 404 {object} http_errors.ErrorResponse
+// @Failure 500 {object} http_errors.ErrorResponse
+// @Router /works/{id} [get]
 func (wc *WorkController) GetByID(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if id == "" {

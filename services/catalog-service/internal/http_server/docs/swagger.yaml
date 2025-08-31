@@ -66,4 +66,31 @@ paths:
       summary: Creates a new work
       tags:
       - Works
+  /works/{id}:
+    get:
+      description: Get a single work by its ID
+      parameters:
+      - description: Work ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Work'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http_errors.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/http_errors.ErrorResponse'
+      summary: Get a work by ID
+      tags:
+      - Works
 swagger: "2.0"

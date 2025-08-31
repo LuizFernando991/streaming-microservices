@@ -71,6 +71,47 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/works/{id}": {
+            "get": {
+                "description": "Get a single work by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Works"
+                ],
+                "summary": "Get a work by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Work ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Work"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/http_errors.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/http_errors.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
