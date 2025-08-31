@@ -32,3 +32,6 @@ migrate-version:
 migrate-reset:
 	@migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" drop -f
 	@migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
+
+generate-docs:
+	swag init -g cmd/main.go -o internal/http_server/docs

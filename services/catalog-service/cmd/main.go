@@ -10,10 +10,16 @@ import (
 	"catalog-service/internal/services"
 	"time"
 
+	_ "catalog-service/internal/http_server/docs"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
+// @title           Catalog Service API
+// @version         1.0
+// @description     API catalog-service
+// @BasePath        /v1
 func main() {
 	cfg, err := config.LoadEnv(".env")
 

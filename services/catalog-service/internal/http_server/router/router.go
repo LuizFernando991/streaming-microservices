@@ -4,6 +4,8 @@ import (
 	"catalog-service/internal/http_server/controllers"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Controllers struct {
@@ -23,7 +25,10 @@ func NewRouter(server *gin.Engine, controllers *Controllers) *Router {
 }
 
 func (r *Router) InitRoutes() {
+
 	v1Group := r.server.Group("/v1")
+
+	v1Group.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Work group
 	worksGroup := v1Group.Group("/work")
