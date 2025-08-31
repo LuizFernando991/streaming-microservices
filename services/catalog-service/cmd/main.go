@@ -1,6 +1,7 @@
 package main
 
 import (
+	"catalog-service/internal/adapters"
 	"catalog-service/internal/config"
 	"catalog-service/internal/http_server"
 	"catalog-service/internal/http_server/controllers"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -29,9 +31,12 @@ func main() {
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 
+	bucketAdapter := adapters.NewBucket(cfg.BucketURL, cfg.BucketKey, cfg.BucketSecret, cfg.BucketTumbName)
 	workRepository := repositories.NewWorkRepository(db)
-	workService := services.NewWorkService(workRepository)
+	workService := services.NewWorkService(workRepository, bucketAdapter)
 	workController := controllers.NewWorkController(workService)
+
+	bucketAdapter.EnsureBucketExists(cfg.BucketTumbName)
 
 	controllers := &router.Controllers{
 		WorkController: workController,

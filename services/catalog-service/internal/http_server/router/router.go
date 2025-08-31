@@ -28,6 +28,6 @@ func (r *Router) InitRoutes() {
 	// Work group
 	worksGroup := v1Group.Group("/work")
 	{
-		worksGroup.POST("/create", func(ctx *gin.Context) {})
+		worksGroup.POST("/create", r.controllers.WorkController.CreateWork)
 	}
 }
