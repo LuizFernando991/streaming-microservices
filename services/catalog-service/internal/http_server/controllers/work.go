@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -61,13 +62,7 @@ func (wc *WorkController) CreateWork(ctx *gin.Context) {
 
 	allowedExts := []string{".jpg", ".jpeg"}
 
-	valid := false
-	for _, allowed := range allowedExts {
-		if strings.ToLower(filepath.Ext(header.Filename)) == allowed {
-			valid = true
-			break
-		}
-	}
+	valid := slices.Contains(allowedExts, strings.ToLower(filepath.Ext(header.Filename)))
 
 	if !valid {
 		ctx.JSON(http.StatusBadRequest, http_errors.ErrorResponse{
